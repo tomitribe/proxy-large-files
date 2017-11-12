@@ -36,6 +36,13 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+/**
+ * The parts of this code we should definitely keep are:
+ *
+ *  - Use of AsyncHttpClient AsyncHandler
+ *  - Use of Servlet AsyncContext
+ *
+ */
 @WebServlet(value = "/proxy/*", asyncSupported = true)
 public class ProxyServlet extends HttpServlet {
 
@@ -102,11 +109,26 @@ public class ProxyServlet extends HttpServlet {
                         });
             }
 
+            /**
+             * After we have copied over the headers, we switch to async mode.
+             *
+             * The remainder of the execution will be done driven by the AsyncHttpClient
+             * and this thread will terminate and return to the pool.
+             *
+             * This is a performance improvement we should attempt to copy over to
+             * our Tribestream implementation.
+             */
             System.out.println("StartAsync{}");
             final AsyncContext async = request.startAsync();
-            // The timeouts of AsyncHttpClient are reliable and should win
+
+            /**
+             * Tomcat will attempt to timeout async connections that do not show activity
+             * for 10 seconds.  The result of this is an HTTP 500 Internal Server Error
+             *
+             * We opt to let the AsyncHttpClient exclusively handle the timeouts and set
+             * Tomcat's timeout to effectively infinite.
+             */
             async.setTimeout(Long.MAX_VALUE);
-            System.out.println("StartAsync{} - Post");
 
             { // Copy incoming Requesty Body
 
@@ -120,6 +142,7 @@ public class ProxyServlet extends HttpServlet {
             { // Lazily get the ServletOutputStream when needed
 
                 out = new Supplier<ServletOutputStream>() {
+                    // thread-safe, just in case
                     volatile ServletOutputStream outputStream;
 
                     @Override
@@ -143,32 +166,36 @@ public class ProxyServlet extends HttpServlet {
             builder.execute(new AsyncHandler<Response>() {
                 @Override
                 public void onThrowable(Throwable throwable) {
-                    System.out.printf("AsyncHandler.onThrowable %s %s%n", throwable.getClass().getName(), throwable.getMessage());
+                    try {
+                        if (throwable instanceof ConnectException) {
+                            // The server is not up and listening
 
-                    if (throwable instanceof ConnectException) {
-                        // The server is not up and listening
+                            try {
+                                ((HttpServletResponse) async.getResponse()).sendError(503, "Service Unavailable");
+                            } catch (IOException e) {
+                                throw new IllegalStateException(e);
+                            }
 
-                        try {
-                            ((HttpServletResponse) async.getResponse()).sendError(503, "Service Unavailable");
-                        } catch (IOException e) {
-                            throw new IllegalStateException(e);
-                        } finally {
-                            async.complete();
+                        } else if (throwable instanceof java.util.concurrent.TimeoutException) {
+                            // The server is not up and listening
+                            // The setRequestTimeout or setReadTimeout
+                            try {
+                                // This will not change the status code to 504 in situations where significant
+                                // data has been written to the outputstream already.  In these situations, the
+                                // response code and headers will be flushed so writing the body may start.
+                                // After this point is no longer possible to change the status code.
+                                ((HttpServletResponse) async.getResponse()).sendError(504, "Gateway Timeout");
+                            } catch (IOException e) {
+                                throw new IllegalStateException(e);
+                            }
+                        } else {
+                            throwable.printStackTrace(System.out);
                         }
-
-                    } else if (throwable instanceof java.util.concurrent.TimeoutException) {
-                        // The server is not up and listening
-
-                        try {
-                            ((HttpServletResponse) async.getResponse()).sendError(504, "Gateway Timeout");
-                        } catch (IOException e) {
-                            throw new IllegalStateException(e);
-                        } finally {
-                            async.complete();
-                        }
-                    } else {
-                        throwable.printStackTrace(System.out);
+                    } finally {
+                        async.complete();
                     }
+
+                    System.out.printf("AsyncHandler.onThrowable %s %s%n", throwable.getClass().getName(), throwable.getMessage());
                 }
 
                 @Override

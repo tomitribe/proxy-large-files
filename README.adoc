@@ -71,3 +71,37 @@ $ ./try.sh proxy_echo
 * Connection #0 to host localhost left intact
 -rw-r--r--  1 dblevins  wheel   1.1G Nov 12 14:10 /tmp/foo.txt
 ----
+
+# GET 500MB over 2.5 minutes
+
+This allows us to challenge the RequestTimeout.
+
+----
+mingus:~/work/tomitribe/proxy-large-files 05:43:30
+$ ./try.sh proxy_slow 500mb 1ms
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying ::1...
+* TCP_NODELAY set
+* Connected to localhost (::1) port 8080 (#0)
+> GET /tomee-grinder-starter-1.0-SNAPSHOT/proxy/tomee-grinder-starter-1.0-SNAPSHOT/color/slow/500mb/1ms HTTP/1.1
+> Host: localhost:8080
+> User-Agent: curl/7.54.0
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+< Date: Sun, 12 Nov 2017 17:43:34 GMT
+< Transfer-Encoding: chunked
+< Server: Apache TomEE
+< Content-Type: application/octet-stream
+< Transfer-Encoding: chunked
+<
+{ [8826 bytes data]
+100  500M    0  500M    0     0  3100k      0 --:--:--  0:02:45 --:--:-- 3079k
+* Connection #0 to host localhost left intact
+-rw-r--r--  1 dblevins  wheel   500M Nov 12 17:46 /tmp/foo.txt
+----
+
+Increase the `1ms` to `2ms` or `10ms` to make the response last longer
+
+`./try.sh proxy_slow 100mb 1s`
