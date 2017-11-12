@@ -16,6 +16,7 @@
  */
 package org.superbiz;
 
+import com.tomitribe.tribestream.proxy.ProxyServlet;
 import org.apache.cxf.jaxrs.client.WebClient;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
@@ -58,7 +59,7 @@ public class ColorServiceTest extends Assert {
      */
     @Deployment(testable = false)
     public static WebArchive createDeployment() {
-        return ShrinkWrap.create(WebArchive.class).addClasses(ColorService.class, Color.class);
+        return ShrinkWrap.create(WebArchive.class).addClasses(ColorService.class, Color.class, ProxyServlet.class);
     }
 
     /**

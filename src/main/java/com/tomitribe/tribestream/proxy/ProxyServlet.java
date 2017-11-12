@@ -14,10 +14,12 @@ import org.asynchttpclient.AsyncHandler;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.BoundRequestBuilder;
 import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.asynchttpclient.HttpResponseBodyPart;
 import org.asynchttpclient.HttpResponseHeaders;
 import org.asynchttpclient.HttpResponseStatus;
 import org.asynchttpclient.Response;
+import org.tomitribe.util.Duration;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
@@ -27,6 +29,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
@@ -36,10 +39,24 @@ import java.util.function.Supplier;
 @WebServlet(value = "/proxy/*", asyncSupported = true)
 public class ProxyServlet extends HttpServlet {
 
+    private final AsyncHttpClient asyncHttpClient;
+
+    public ProxyServlet() {
+        final DefaultAsyncHttpClientConfig.Builder config = new DefaultAsyncHttpClientConfig.Builder()
+                .setRequestTimeout(t("1 hour"))
+                .setReadTimeout(t("10 seconds"))
+                ;
+
+        asyncHttpClient = new DefaultAsyncHttpClient(config.build());
+    }
+
+    private int t(String expression) {
+        return (int) new Duration(expression).getTime(TimeUnit.MILLISECONDS);
+    }
+
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
-            final AsyncHttpClient asyncHttpClient = new DefaultAsyncHttpClient();
 
             final URI uri;
             { // Proxy all requests to localhost:7000 for this prototype
@@ -87,7 +104,8 @@ public class ProxyServlet extends HttpServlet {
 
             System.out.println("StartAsync{}");
             final AsyncContext async = request.startAsync();
-            async.setTimeout(TimeUnit.MILLISECONDS.toMinutes(5));
+            // The timeouts of AsyncHttpClient are reliable and should win
+            async.setTimeout(Long.MAX_VALUE);
             System.out.println("StartAsync{} - Post");
 
             { // Copy incoming Requesty Body
@@ -125,8 +143,32 @@ public class ProxyServlet extends HttpServlet {
             builder.execute(new AsyncHandler<Response>() {
                 @Override
                 public void onThrowable(Throwable throwable) {
-                    System.out.println("AsyncHandler.onThrowable");
-                    throwable.printStackTrace(System.out);
+                    System.out.printf("AsyncHandler.onThrowable %s %s%n", throwable.getClass().getName(), throwable.getMessage());
+
+                    if (throwable instanceof ConnectException) {
+                        // The server is not up and listening
+
+                        try {
+                            ((HttpServletResponse) async.getResponse()).sendError(503, "Service Unavailable");
+                        } catch (IOException e) {
+                            throw new IllegalStateException(e);
+                        } finally {
+                            async.complete();
+                        }
+
+                    } else if (throwable instanceof java.util.concurrent.TimeoutException) {
+                        // The server is not up and listening
+
+                        try {
+                            ((HttpServletResponse) async.getResponse()).sendError(504, "Gateway Timeout");
+                        } catch (IOException e) {
+                            throw new IllegalStateException(e);
+                        } finally {
+                            async.complete();
+                        }
+                    } else {
+                        throwable.printStackTrace(System.out);
+                    }
                 }
 
                 @Override

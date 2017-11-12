@@ -16,8 +16,6 @@
  */
 package org.superbiz;
 
-import org.codehaus.swizzle.stream.FixedTokenReplacementInputStream;
-import org.codehaus.swizzle.stream.ReplaceStringInputStream;
 import org.tomitribe.util.Duration;
 import org.tomitribe.util.IO;
 import org.tomitribe.util.Size;
@@ -97,6 +95,45 @@ public class ColorService {
         };
     }
 
+    @Path("slow/{size}/{pause}")
+    @GET
+    public StreamingOutput large(final @PathParam("size") Size size, final @PathParam("pause") Duration pause) {
+        final long bytesWanted = size.getSize(SizeUnit.BYTES);
+        final long sleep = pause.getTime(TimeUnit.MILLISECONDS);
+
+        final byte[] generatedData = new byte[1024];
+        for (int i = 0; i < generatedData.length; i++) generatedData[i] = 'A';
+
+        return os -> {
+
+            final int blocks = (int) (bytesWanted / generatedData.length);
+            for (int i = 0; i < blocks; i++) {
+                os.write(generatedData);
+                try {
+                    Thread.sleep(sleep);
+                } catch (InterruptedException e) {
+                    Thread.interrupted();
+                }
+            }
+
+            final int remainder = (int) (bytesWanted % generatedData.length);
+            os.write(generatedData, 0, remainder);
+        };
+    }
+
+    @Path("sleep/{sleep}")
+    @GET
+    public StreamingOutput sleep(final @PathParam("sleep") Duration sleep) {
+        return os -> {
+            try {
+                Thread.sleep(sleep.getTime(TimeUnit.MILLISECONDS));
+            } catch (InterruptedException e) {
+                Thread.interrupted();
+            }
+            os.write("Done".getBytes());
+        };
+    }
+
     @Path("timeout/{timeout}")
     @GET
     public StreamingOutput large(final @PathParam("timeout") Duration timeout) {
@@ -139,7 +176,7 @@ public class ColorService {
         }
 
         return os -> {
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[1024*8];
             int length;
 
             while((length = from.read(buffer)) != -1) {
