@@ -17,40 +17,27 @@ import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.HttpResponseBodyPart;
 import org.asynchttpclient.HttpResponseHeaders;
 import org.asynchttpclient.HttpResponseStatus;
-import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Response;
 
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
+import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.annotation.WebFilter;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-
-@WebFilter("/proxy/*")
-public class ProxyFilter implements javax.servlet.Filter {
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
-
-    }
+@WebServlet(value = "/proxy/*", asyncSupported = true)
+public class ProxyServlet extends HttpServlet {
 
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        filter((HttpServletRequest) request, (HttpServletResponse) response, chain);
-    }
-
-    public void filter(final HttpServletRequest request, final HttpServletResponse response, FilterChain chain) throws IOException, ServletException {
+    protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
             final AsyncHttpClient asyncHttpClient = new DefaultAsyncHttpClient();
 
@@ -61,28 +48,6 @@ public class ProxyFilter implements javax.servlet.Filter {
                 System.out.printf("RequestUri{%s}%n", requestURI);
                 uri = URI.create("http://localhost:7000/").resolve(requestURI);
             }
-
-            final Supplier<ServletOutputStream> out;
-            { // Lazily get the ServletOutputStream when needed
-
-                out = new Supplier<ServletOutputStream>() {
-                    volatile ServletOutputStream outputStream;
-
-                    @Override
-                    public ServletOutputStream get() {
-                        try {
-                            if (outputStream == null) {
-                                System.out.println("OpenStream{}");
-                                outputStream = response.getOutputStream();
-                            }
-                            return outputStream;
-                        } catch (IOException e) {
-                            throw new IllegalStateException(e);
-                        }
-                    }
-                };
-            }
-
 
             final BoundRequestBuilder builder;
             { // Use the Appropriate HTTP Request Method
@@ -120,18 +85,48 @@ public class ProxyFilter implements javax.servlet.Filter {
                         });
             }
 
+            System.out.println("StartAsync{}");
+            final AsyncContext async = request.startAsync();
+            async.setTimeout(TimeUnit.MILLISECONDS.toMinutes(5));
+            System.out.println("StartAsync{} - Post");
+
             { // Copy incoming Requesty Body
 
                 if (request.getContentLength() > 0) {
-                    builder.setBody(request.getInputStream());
+                    System.out.println("GetInputStream{}");
+                    builder.setBody(async.getRequest().getInputStream());
                 }
             }
 
+            final Supplier<ServletOutputStream> out;
+            { // Lazily get the ServletOutputStream when needed
+
+                out = new Supplier<ServletOutputStream>() {
+                    volatile ServletOutputStream outputStream;
+
+                    @Override
+                    public ServletOutputStream get() {
+                        try {
+                            if (outputStream == null) {
+                                System.out.println("OpenStream{}");
+                                outputStream = async.getResponse().getOutputStream();
+                            }
+                            return outputStream;
+                        } catch (IOException e) {
+                            throw new IllegalStateException(e);
+                        }
+                    }
+                };
+            }
+
+
+            System.out.println("Execute{}");
             // And away we go
-            final ListenableFuture<Response> execute = builder.execute(new AsyncHandler<Response>() {
+            builder.execute(new AsyncHandler<Response>() {
                 @Override
                 public void onThrowable(Throwable throwable) {
                     System.out.println("AsyncHandler.onThrowable");
+                    throwable.printStackTrace(System.out);
                 }
 
                 @Override
@@ -144,7 +139,7 @@ public class ProxyFilter implements javax.servlet.Filter {
                 @Override
                 public State onStatusReceived(HttpResponseStatus status) throws Exception {
                     System.out.printf("AsyncHandler.onStatusReceived %s - %s%n", status.getStatusCode(), status.getStatusText());
-                    response.setStatus(status.getStatusCode(), status.getStatusText());
+                    ((HttpServletResponse) async.getResponse()).setStatus(status.getStatusCode(), status.getStatusText());
                     return State.CONTINUE;
                 }
 
@@ -156,7 +151,7 @@ public class ProxyFilter implements javax.servlet.Filter {
                         final String key = entry.getKey();
                         final String value = entry.getValue();
                         System.out.printf(" %s: %s%n", key, value);
-                        response.setHeader(key, value);
+                        ((HttpServletResponse) async.getResponse()).setHeader(key, value);
                     }
                     return State.CONTINUE;
                 }
@@ -166,23 +161,14 @@ public class ProxyFilter implements javax.servlet.Filter {
                     out.get().flush();
                     out.get().close();
                     System.out.println("AsyncHandler.onCompleted!");
+                    async.complete();
                     return null;
                 }
             });
 
-            System.out.println("AsyncHandler.toCompletableFuture");
-            final CompletableFuture<Response> future = execute.toCompletableFuture();
-            future.get();
-        } catch (InterruptedException e) {
-            Thread.interrupted();
-            throw new IOException(e);
-        } catch (ExecutionException e) {
+            System.out.println("ProxyServlet Completed");
+        } catch (Exception e) {
             throw new IOException(e);
         }
-    }
-
-    @Override
-    public void destroy() {
-
     }
 }

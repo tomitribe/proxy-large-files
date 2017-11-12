@@ -18,9 +18,11 @@ package org.superbiz;
 
 import org.codehaus.swizzle.stream.FixedTokenReplacementInputStream;
 import org.codehaus.swizzle.stream.ReplaceStringInputStream;
+import org.tomitribe.util.Duration;
 import org.tomitribe.util.IO;
 import org.tomitribe.util.Size;
 import org.tomitribe.util.SizeUnit;
+import org.tomitribe.util.TimeUtils;
 
 import javax.ejb.Lock;
 import javax.ejb.Singleton;
@@ -36,6 +38,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static javax.ejb.LockType.READ;
@@ -91,6 +94,31 @@ public class ColorService {
 
             final int remainder = (int) (bytesWanted % generatedData.length);
             os.write(generatedData, 0, remainder);
+        };
+    }
+
+    @Path("timeout/{timeout}")
+    @GET
+    public StreamingOutput large(final @PathParam("timeout") Duration timeout) {
+        System.out.printf("Timeout %s%n", TimeUtils.abbreviateMillis(timeout.getTime(TimeUnit.MILLISECONDS)));
+
+        final byte[] generatedData = new byte[128];
+        for (int i = 0; i < generatedData.length; i++) generatedData[i] = 'A';
+
+        return os -> {
+            final long time = timeout.getTime(TimeUnit.MILLISECONDS);
+            for (long i = 100; i < time; i*=2) {
+                os.write(generatedData);
+                os.write(String.format("%nSleep %s%n", TimeUtils.abbreviateMillis(i)).getBytes());
+                System.out.printf("Sleep %s%n", TimeUtils.abbreviateMillis(i));
+                try {
+                    Thread.sleep(i);
+                } catch (InterruptedException e) {
+                    Thread.interrupted();
+                    e.printStackTrace();
+                }
+            }
+            os.write(String.format("%nDone%n").getBytes());
         };
     }
 
