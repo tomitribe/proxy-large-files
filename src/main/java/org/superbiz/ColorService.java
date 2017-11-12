@@ -16,17 +16,26 @@
  */
 package org.superbiz;
 
+import org.codehaus.swizzle.stream.FixedTokenReplacementInputStream;
+import org.codehaus.swizzle.stream.ReplaceStringInputStream;
+import org.tomitribe.util.IO;
 import org.tomitribe.util.Size;
 import org.tomitribe.util.SizeUnit;
 
 import javax.ejb.Lock;
 import javax.ejb.Singleton;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.StreamingOutput;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static javax.ejb.LockType.READ;
@@ -37,6 +46,9 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 @Singleton
 @Path("/color")
 public class ColorService {
+
+    @Context
+    private HttpServletRequest request;
 
     private AtomicReference<String> color;
 
@@ -79,6 +91,38 @@ public class ColorService {
 
             final int remainder = (int) (bytesWanted % generatedData.length);
             os.write(generatedData, 0, remainder);
+        };
+    }
+
+    @POST
+    @Path("echo")
+    @Consumes("*/*")
+    public StreamingOutput echo() {
+
+        final InputStream from;
+        try {
+            final File file = File.createTempFile("request", ".bin");
+            System.out.printf("Buffer{%s}%n", file.getAbsolutePath());
+            IO.copy(request.getInputStream(), file);
+
+            from = IO.read(file);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+
+        return os -> {
+            byte[] buffer = new byte[1024];
+            int length;
+
+            while((length = from.read(buffer)) != -1) {
+                final String string = new String(buffer);
+
+                final String replaced = string.replace('A', 'B');
+
+                os.write(replaced.getBytes(), 0, length);
+            }
+
+            os.flush();
         };
     }
 }

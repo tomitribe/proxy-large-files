@@ -54,40 +54,81 @@ public class ProxyFilter implements javax.servlet.Filter {
         try {
             final AsyncHttpClient asyncHttpClient = new DefaultAsyncHttpClient();
 
-            final String requestURI = request.getRequestURI().replaceFirst(".*/proxy/", "");
-            System.out.printf("RequestUri{%s}%n", requestURI);
+            final URI uri;
+            { // Proxy all requests to localhost:7000 for this prototype
 
-            final URI uri = URI.create("http://localhost:7000/").resolve(requestURI);
+                final String requestURI = request.getRequestURI().replaceFirst(".*/proxy/", "");
+                System.out.printf("RequestUri{%s}%n", requestURI);
+                uri = URI.create("http://localhost:7000/").resolve(requestURI);
+            }
 
-            System.out.println("Proxy to " + uri);
-            final Supplier<ServletOutputStream> out = new Supplier<ServletOutputStream>() {
-                volatile ServletOutputStream outputStream;
+            final Supplier<ServletOutputStream> out;
+            { // Lazily get the ServletOutputStream when needed
 
-                @Override
-                public ServletOutputStream get() {
-                    try {
-                        if (outputStream == null) {
-                            System.out.println("OpenStream{}");
-                            outputStream = response.getOutputStream();
+                out = new Supplier<ServletOutputStream>() {
+                    volatile ServletOutputStream outputStream;
+
+                    @Override
+                    public ServletOutputStream get() {
+                        try {
+                            if (outputStream == null) {
+                                System.out.println("OpenStream{}");
+                                outputStream = response.getOutputStream();
+                            }
+                            return outputStream;
+                        } catch (IOException e) {
+                            throw new IllegalStateException(e);
                         }
-                        return outputStream;
-                    } catch (IOException e) {
-                        throw new IllegalStateException(e);
                     }
+                };
+            }
+
+
+            final BoundRequestBuilder builder;
+            { // Use the Appropriate HTTP Request Method
+
+                final String method = request.getMethod().toUpperCase();
+                if ("GET".equals(method)) {
+                    builder = asyncHttpClient.prepareGet(uri.toASCIIString());
+                } else if ("CONNECT".equals(method)) {
+                    builder = asyncHttpClient.prepareConnect(uri.toASCIIString());
+                } else if ("OPTIONS".equals(method)) {
+                    builder = asyncHttpClient.prepareOptions(uri.toASCIIString());
+                } else if ("HEAD".equals(method)) {
+                    builder = asyncHttpClient.prepareHead(uri.toASCIIString());
+                } else if ("POST".equals(method)) {
+                    builder = asyncHttpClient.preparePost(uri.toASCIIString());
+                } else if ("PUT".equals(method)) {
+                    builder = asyncHttpClient.preparePut(uri.toASCIIString());
+                } else if ("DELETE".equals(method)) {
+                    builder = asyncHttpClient.prepareDelete(uri.toASCIIString());
+                } else if ("PATCH".equals(method)) {
+                    builder = asyncHttpClient.preparePatch(uri.toASCIIString());
+                } else {
+                    throw new IllegalStateException("Unkown HTTP Method " + method);
                 }
-            };
+            }
 
-            final BoundRequestBuilder get = asyncHttpClient.prepareGet(uri.toASCIIString());
-            Collections.list(request.getHeaderNames()).stream()
-                    .filter(name -> name.equalsIgnoreCase("User-Agent"))
-                    .filter(name -> name.equalsIgnoreCase("Host"))
-                    .forEach(name -> {
-                        System.out.printf("AddHeader{name='%s', value='%s'}%n", name, request.getHeader(name));
-                        get.addHeader(name, request.getHeader(name));
-                    });
+            { // Copy all the incoming Request Headers
 
-            System.out.printf("Execute{}%n");
-            final ListenableFuture<Response> execute = get.execute(new AsyncHandler<Response>() {
+                Collections.list(request.getHeaderNames()).stream()
+                        .filter(name -> name.equalsIgnoreCase("User-Agent"))
+                        .filter(name -> name.equalsIgnoreCase("Host"))
+                        .forEach(name -> {
+                            System.out.printf("AddHeader{name='%s', value='%s'}%n", name, request.getHeader(name));
+                            builder.addHeader(name, request.getHeader(name));
+                        });
+            }
+
+            { // Copy incoming Requesty Body
+
+                if (request.getContentLength() > 0) {
+                    builder.setBody(request.getInputStream());
+                }
+            }
+
+            // And away we go
+            final ListenableFuture<Response> execute = builder.execute(new AsyncHandler<Response>() {
                 @Override
                 public void onThrowable(Throwable throwable) {
                     System.out.println("AsyncHandler.onThrowable");
@@ -129,7 +170,7 @@ public class ProxyFilter implements javax.servlet.Filter {
                 }
             });
 
-            System.out.println("AsyncHandler.onCompleted!");
+            System.out.println("AsyncHandler.toCompletableFuture");
             final CompletableFuture<Response> future = execute.toCompletableFuture();
             future.get();
         } catch (InterruptedException e) {
@@ -144,5 +185,4 @@ public class ProxyFilter implements javax.servlet.Filter {
     public void destroy() {
 
     }
-
 }
