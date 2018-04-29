@@ -10,13 +10,13 @@
 package com.tomitribe.tribestream.proxy;
 
 import io.netty.handler.codec.http.HttpHeaders;
+import org.apache.openejb.loader.IO;
 import org.asynchttpclient.AsyncHandler;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.BoundRequestBuilder;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.asynchttpclient.HttpResponseBodyPart;
-import org.asynchttpclient.HttpResponseHeaders;
 import org.asynchttpclient.HttpResponseStatus;
 import org.asynchttpclient.Response;
 import org.tomitribe.util.Duration;
@@ -25,16 +25,27 @@ import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.ConnectException;
 import java.net.URI;
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.Collections.list;
 
 /**
  * The parts of this code we should definitely keep are:
@@ -47,12 +58,12 @@ import java.util.function.Supplier;
 public class ProxyServlet extends HttpServlet {
 
     private final AsyncHttpClient asyncHttpClient;
+    private final AtomicLong count = new AtomicLong(1000);
 
     public ProxyServlet() {
         final DefaultAsyncHttpClientConfig.Builder config = new DefaultAsyncHttpClientConfig.Builder()
                 .setRequestTimeout(t("1 hour"))
-                .setReadTimeout(t("10 seconds"))
-                ;
+                .setReadTimeout(t("10 seconds"));
 
         asyncHttpClient = new DefaultAsyncHttpClient(config.build());
     }
@@ -62,7 +73,10 @@ public class ProxyServlet extends HttpServlet {
     }
 
     @Override
-    protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void service(final HttpServletRequest request, final HttpServletResponse response) throws ServletException, IOException {
+        log(request);
+
+
         try {
 
             final URI uri;
@@ -100,7 +114,7 @@ public class ProxyServlet extends HttpServlet {
 
             { // Copy all the incoming Request Headers
 
-                Collections.list(request.getHeaderNames()).stream()
+                list(request.getHeaderNames()).stream()
                         .filter(name -> name.equalsIgnoreCase("User-Agent"))
                         .filter(name -> name.equalsIgnoreCase("Host"))
                         .forEach(name -> {
@@ -200,7 +214,7 @@ public class ProxyServlet extends HttpServlet {
 
                 @Override
                 public State onBodyPartReceived(HttpResponseBodyPart part) throws Exception {
-                    System.out.printf("AsyncHandler.onBodyPartReceived %s - %s%n", part.length(), part.isLast());
+//                    System.out.printf("AsyncHandler.onBodyPartReceived %s - %s%n", part.length(), part.isLast());
                     out.get().write(part.getBodyPartBytes());
                     return State.CONTINUE;
                 }
@@ -213,9 +227,8 @@ public class ProxyServlet extends HttpServlet {
                 }
 
                 @Override
-                public State onHeadersReceived(HttpResponseHeaders httpResponseHeaders) throws Exception {
+                public State onHeadersReceived(final HttpHeaders headers) throws Exception {
                     System.out.println("AsyncHandler.onHeadersReceived");
-                    final HttpHeaders headers = httpResponseHeaders.getHeaders();
                     for (final Map.Entry<String, String> entry : headers.entries()) {
                         final String key = entry.getKey();
                         final String value = entry.getValue();
@@ -237,7 +250,77 @@ public class ProxyServlet extends HttpServlet {
 
             System.out.println("ProxyServlet Completed");
         } catch (Exception e) {
+            e.printStackTrace(System.out);
             throw new IOException(e);
         }
+    }
+
+
+    private void log(final HttpServletRequest request) throws FileNotFoundException {
+        final File file = new File(String.format("/tmp/requests/request-%s-%s.log", trim(), count.incrementAndGet()));
+        final PrintStream out = new PrintStream(IO.write(file));
+
+        try {
+            {
+                final List<Method> methods = Stream.of(request.getClass().getMethods())
+                        .filter(method -> method.getParameters().length == 0)
+                        .filter(method -> method.getName().startsWith("get"))
+                        .filter(method -> Modifier.isPublic(method.getModifiers()))
+                        .filter(method -> !Modifier.isStatic(method.getModifiers()))
+                        .filter(method -> !method.getName().equals("getInputStream"))
+                        .filter(method -> !method.getName().equals("getReader"))
+                        .filter(method -> !method.getName().equals("getLocales"))
+                        .filter(method -> !method.getName().equals("getHeaderNames"))
+                        .filter(method -> !method.getName().equals("getSession"))
+                        .filter(method -> !method.getName().equals("getServletContext"))
+                        .filter(method -> !method.getName().equals("getAttributeNames"))
+                        .filter(method -> !method.getName().equals("getParameterNames"))
+                        .filter(method -> !method.getName().equals("getParameterMap"))
+                        .collect(Collectors.toList());
+
+                for (final Method method : methods) {
+                    try {
+                        out.printf("%s : %s%n", method.getName(), method.invoke(request));
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                }
+            }
+            out.println("-headers--------------------------------------");
+            for (final String name : list(request.getHeaderNames())) {
+                out.printf("%s : %s%n", name, request.getHeader(name));
+            }
+
+            out.println("-parameters-----------------------------------");
+            for (final String name : list(request.getParameterNames())) {
+                out.printf("%s : %s%n", name, request.getParameter(name));
+            }
+
+
+            if (request.getCookies() != null) for (final Cookie cookie : request.getCookies()) {
+                final List<Method> methods = Stream.of(cookie.getClass().getMethods())
+                        .filter(method -> method.getParameters().length == 0)
+                        .filter(method -> method.getName().startsWith("get"))
+                        .filter(method -> Modifier.isPublic(method.getModifiers()))
+                        .filter(method -> !Modifier.isStatic(method.getModifiers()))
+                        .collect(Collectors.toList());
+                for (final Method method : methods) {
+                    try {
+                        out.printf("%s : %s%n", method.getName(), method.invoke(request));
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                }
+            }
+        } finally {
+            out.flush();
+            out.close();
+        }
+
+    }
+
+    private String trim() {
+        final String now = System.currentTimeMillis() + "";
+        return now.substring(5);
     }
 }
