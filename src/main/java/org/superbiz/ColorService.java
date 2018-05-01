@@ -43,9 +43,9 @@ import static javax.ejb.LockType.READ;
 import static javax.ejb.LockType.WRITE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
-@Lock(READ)
-@Singleton
-@Path("/color")
+//@Lock(READ)
+//@Singleton
+//@Path("/color")
 public class ColorService {
 
     @Context
