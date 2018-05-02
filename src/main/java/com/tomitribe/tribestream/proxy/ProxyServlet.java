@@ -34,28 +34,25 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.ConnectException;
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Collections.list;
 
 /**
- * The parts of this code we should definitely keep are:
+ * To set the host without a recompile:
  *
- *  - Use of AsyncHttpClient AsyncHandler
- *  - Use of Servlet AsyncContext
+ * curl -v "http://localhost:8080?host=http://director.downloads.raspberrypi.org"
  *
+ * If you do this in a browser, it will set a cookie that can be used remember
+ * which location you want to proxy for that browser session.
  */
 @WebServlet(value = "/*", asyncSupported = true)
 public class ProxyServlet extends HttpServlet {
@@ -78,7 +75,6 @@ public class ProxyServlet extends HttpServlet {
 
     @Override
     protected void service(final HttpServletRequest request, final HttpServletResponse response) throws ServletException, IOException {
-
 
         final PrintStream log = log(request);
 
@@ -136,10 +132,9 @@ public class ProxyServlet extends HttpServlet {
                 }
             }
 
-            if (1 == 0) { // Copy all the incoming Request Headers
+            { // Copy all the incoming Request Headers
 
                 list(request.getHeaderNames()).stream()
-//                        .filter(name -> name.equalsIgnoreCase("User-Agent"))
                         .filter(name -> !name.equalsIgnoreCase("host"))
                         .filter(name -> !name.equalsIgnoreCase("referer"))
                         .forEach(name -> {
@@ -147,7 +142,8 @@ public class ProxyServlet extends HttpServlet {
                         });
             }
 
-            if (1 == 0) {
+            { // Copy all the query parameters
+
                 list(request.getParameterNames()).stream()
                         .forEach(name -> {
                             System.out.printf("AddParameter{name='%s', value='%s'}%n", name, request.getHeader(name));
@@ -155,11 +151,19 @@ public class ProxyServlet extends HttpServlet {
                         });
             }
 
-            builder.setHeader("Host", uri.getHost());
-            final String referer = request.getHeader("referer");
-            if (referer != null && referer.contains("localhost")) {
-                final String newReferer = referer.replace("http://localhost:8080", host.toString().replaceAll("/?$", ""));
-                builder.setHeader("referer", newReferer);
+            { // set the host
+
+                builder.setHeader("Host", uri.getHost());
+            }
+
+            { // update the referer, if any
+
+                final String referer = request.getHeader("referer");
+                if (referer != null && referer.contains("localhost")) {
+                    final String hostWithNoSlash = host.toString().replaceAll("/?$", "");
+                    final String newReferer = referer.replace("http://localhost:8080", hostWithNoSlash);
+                    builder.setHeader("referer", newReferer);
+                }
             }
 
             /**
@@ -167,9 +171,6 @@ public class ProxyServlet extends HttpServlet {
              *
              * The remainder of the execution will be done driven by the AsyncHttpClient
              * and this thread will terminate and return to the pool.
-             *
-             * This is a performance improvement we should attempt to copy over to
-             * our Tribestream implementation.
              */
             System.out.println("StartAsync{}");
             final AsyncContext async = request.startAsync();
@@ -183,224 +184,52 @@ public class ProxyServlet extends HttpServlet {
              */
             async.setTimeout(Long.MAX_VALUE);
 
-            if (1 == 0) builder.setBody(async.getRequest().getInputStream());
+            /**
+             * We must not set an InputStream on AsyncHttpClient or it will force a
+             * `Transfer-Encoding: chunked` header into the request even if the input
+             * stream has no contents.
+             */
+            if (hasBody(request)) {
+                builder.setBody(async.getRequest().getInputStream());
+            }
 
             System.out.println("Execute{}");
-            // And away we go
-            final ResponseAsyncHandler handler = new ResponseAsyncHandler(async);
 
-            builder.execute(new LoggingHandler<>(handler, log));
+            /**
+             * And away we go.  Hand-off the AsyncContext to AsyncHttpClient
+             */
+
+            builder.execute(new LoggingHandler(new ResponseAsyncHandler(async), log));
+
+            /**
+             * At this moment the request is happening inside AsyncHttpClient's
+             * thread pool and this thread is free to return.  Reaching this line
+             * does not mean the request is complete and that we know the outcome
+             */
 
             System.out.println("ProxyServlet Completed");
+
         } catch (Exception e) {
             e.printStackTrace(System.out);
             throw new IOException(e);
         }
     }
 
+    private boolean hasBody(final HttpServletRequest request) {
+        if (request.getHeader("Content-Length") != null) return true;
+        if (request.getHeader("Transfer-Encoding") != null) return true;
+        return false;
+    }
 
     private PrintStream log(final HttpServletRequest request) throws FileNotFoundException {
         final String uri = request.getRequestURI().replace('/', '.').replaceAll("^\\.$", "");
         final File file = new File(String.format("/tmp/requests/request-%s-%s%s.log", trim(), count.incrementAndGet(), uri));
-        final PrintStream out = new PrintStream(IO.write(file));
-
-        if (1 == 1) return out;
-
-        try {
-            {
-                final List<Method> methods = Stream.of(request.getClass().getMethods())
-                        .filter(method -> method.getParameters().length == 0)
-                        .filter(method -> method.getName().startsWith("get"))
-                        .filter(method -> Modifier.isPublic(method.getModifiers()))
-                        .filter(method -> !Modifier.isStatic(method.getModifiers()))
-                        .filter(method -> !method.getName().equals("getInputStream"))
-                        .filter(method -> !method.getName().equals("getReader"))
-                        .filter(method -> !method.getName().equals("getLocales"))
-                        .filter(method -> !method.getName().equals("getHeaderNames"))
-                        .filter(method -> !method.getName().equals("getSession"))
-                        .filter(method -> !method.getName().equals("getServletContext"))
-                        .filter(method -> !method.getName().equals("getAttributeNames"))
-                        .filter(method -> !method.getName().equals("getParameterNames"))
-                        .filter(method -> !method.getName().equals("getParameterMap"))
-                        .collect(Collectors.toList());
-
-                for (final Method method : methods) {
-                    try {
-                        out.printf("%s : %s%n", method.getName(), method.invoke(request));
-                    } catch (Exception e) {
-                        throw new IllegalStateException(e);
-                    }
-                }
-            }
-            out.println("-headers--------------------------------------");
-            for (final String name : list(request.getHeaderNames())) {
-                out.printf("%s : %s%n", name, request.getHeader(name));
-            }
-
-            out.println("-parameters-----------------------------------");
-            for (final String name : list(request.getParameterNames())) {
-                out.printf("%s : %s%n", name, request.getParameter(name));
-            }
-
-
-            if (request.getCookies() != null) for (final Cookie cookie : request.getCookies()) {
-                final List<Method> methods = Stream.of(cookie.getClass().getMethods())
-                        .filter(method -> method.getParameters().length == 0)
-                        .filter(method -> method.getName().startsWith("get"))
-                        .filter(method -> Modifier.isPublic(method.getModifiers()))
-                        .filter(method -> !Modifier.isStatic(method.getModifiers()))
-                        .collect(Collectors.toList());
-                out.println("-cookie---------------------------------------");
-                for (final Method method : methods) {
-                    try {
-                        out.printf("%s : %s%n", method.getName(), method.invoke(cookie));
-                    } catch (Exception e) {
-                        e.printStackTrace(System.out);
-                        throw new IllegalStateException(e);
-                    }
-                }
-            }
-            out.println();
-        } finally {
-            out.flush();
-        }
-
-        return out;
+        return new PrintStream(IO.write(file));
     }
 
     private String trim() {
         final String now = System.currentTimeMillis() + "";
         return now.substring(5);
-    }
-
-    public static class LoggingServletOutputStream extends ServletOutputStream {
-        private final ServletOutputStream servlet;
-        private final PrintStream logger;
-
-        public LoggingServletOutputStream(final ServletOutputStream servlet, final PrintStream logger) {
-            this.servlet = servlet;
-            this.logger = logger;
-        }
-
-        @Override
-        public void print(String s) throws IOException {
-            logger.print(s);
-            servlet.print(s);
-        }
-
-        @Override
-        public void print(boolean b) throws IOException {
-            logger.print(b);
-            servlet.print(b);
-        }
-
-        @Override
-        public void print(char c) throws IOException {
-            logger.print(c);
-            servlet.print(c);
-        }
-
-        @Override
-        public void print(int i) throws IOException {
-            logger.print(i);
-            servlet.print(i);
-        }
-
-        @Override
-        public void print(long l) throws IOException {
-            logger.print(l);
-            servlet.print(l);
-        }
-
-        @Override
-        public void print(float f) throws IOException {
-            logger.print(f);
-            servlet.print(f);
-        }
-
-        @Override
-        public void print(double d) throws IOException {
-            logger.print(d);
-            servlet.print(d);
-        }
-
-        @Override
-        public void println() throws IOException {
-            logger.println();
-            servlet.println();
-        }
-
-        @Override
-        public void println(String s) throws IOException {
-            logger.println(s);
-            servlet.println(s);
-        }
-
-        @Override
-        public void println(boolean b) throws IOException {
-            logger.println(b);
-            servlet.println(b);
-        }
-
-        @Override
-        public void println(char c) throws IOException {
-            logger.println(c);
-            servlet.println(c);
-        }
-
-        @Override
-        public void println(int i) throws IOException {
-            logger.println(i);
-            servlet.println(i);
-        }
-
-        @Override
-        public void println(long l) throws IOException {
-            logger.println(l);
-            servlet.println(l);
-        }
-
-        @Override
-        public void println(float f) throws IOException {
-            logger.println(f);
-            servlet.println(f);
-        }
-
-        @Override
-        public void println(double d) throws IOException {
-            logger.println(d);
-            servlet.println(d);
-        }
-
-        @Override
-        public void write(int b) throws IOException {
-            logger.write(b);
-            servlet.write(b);
-        }
-
-        @Override
-        public void write(byte[] b) throws IOException {
-            logger.write(b);
-            servlet.write(b);
-        }
-
-        @Override
-        public void write(byte[] b, int off, int len) throws IOException {
-            logger.write(b, off, len);
-            servlet.write(b, off, len);
-        }
-
-        @Override
-        public void flush() throws IOException {
-            logger.flush();
-            servlet.flush();
-        }
-
-        @Override
-        public void close() throws IOException {
-//            log.close();
-            servlet.close();
-        }
     }
 
     private static class ServletOutputStreamSupplier implements Supplier<ServletOutputStream> {
