@@ -9,13 +9,14 @@
  */
 package com.tomitribe.tribestream.proxy;
 
-import io.netty.handler.codec.http.HttpHeaders;
+import com.tomitribe.tribestream.peroxide.LoggingHandler;
 import org.asynchttpclient.AsyncHandler;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.BoundRequestBuilder;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.asynchttpclient.HttpResponseBodyPart;
+import org.asynchttpclient.HttpResponseHeaders;
 import org.asynchttpclient.HttpResponseStatus;
 import org.asynchttpclient.Response;
 import org.tomitribe.util.Duration;
@@ -135,7 +136,7 @@ public class ProxyServlet extends HttpServlet {
                 }
             }
 
-            { // Copy all the incoming Request Headers
+            if (1 == 0) { // Copy all the incoming Request Headers
 
                 list(request.getHeaderNames()).stream()
 //                        .filter(name -> name.equalsIgnoreCase("User-Agent"))
@@ -146,7 +147,7 @@ public class ProxyServlet extends HttpServlet {
                         });
             }
 
-            {
+            if (1 == 0) {
                 list(request.getParameterNames()).stream()
                         .forEach(name -> {
                             System.out.printf("AddParameter{name='%s', value='%s'}%n", name, request.getHeader(name));
@@ -181,11 +182,14 @@ public class ProxyServlet extends HttpServlet {
              * Tomcat's timeout to effectively infinite.
              */
             async.setTimeout(Long.MAX_VALUE);
-            builder.setBody(async.getRequest().getInputStream());
+
+            if (1 == 0) builder.setBody(async.getRequest().getInputStream());
 
             System.out.println("Execute{}");
             // And away we go
-            builder.execute(new ResponseAsyncHandler(async));
+            final ResponseAsyncHandler handler = new ResponseAsyncHandler(async);
+
+            builder.execute(new LoggingHandler<>(handler, log));
 
             System.out.println("ProxyServlet Completed");
         } catch (Exception e) {
@@ -199,6 +203,8 @@ public class ProxyServlet extends HttpServlet {
         final String uri = request.getRequestURI().replace('/', '.').replaceAll("^\\.$", "");
         final File file = new File(String.format("/tmp/requests/request-%s-%s%s.log", trim(), count.incrementAndGet(), uri));
         final PrintStream out = new PrintStream(IO.write(file));
+
+        if (1 == 1) return out;
 
         try {
             {
@@ -479,9 +485,9 @@ public class ProxyServlet extends HttpServlet {
         }
 
         @Override
-        public State onHeadersReceived(final HttpHeaders headers) throws Exception {
+        public State onHeadersReceived(final HttpResponseHeaders headers) throws Exception {
             System.out.println("AsyncHandler.onHeadersReceived");
-            for (final Map.Entry<String, String> entry : headers.entries()) {
+            for (final Map.Entry<String, String> entry : headers.getHeaders().entries()) {
                 final String key = entry.getKey();
                 final String value = entry.getValue();
                 System.out.printf(" %s: %s%n", key, value);

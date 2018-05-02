@@ -28,6 +28,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.tomitribe.tribestream</groupId>
+      <artifactId>tribestream-peroxide</artifactId>
+      <version>0.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.openejb</groupId>
       <artifactId>javaee-api</artifactId>
       <version>${openejb.javaee.api}</version>
@@ -169,7 +174,7 @@
     <failOnMissingWebXml>false</failOnMissingWebXml>
     <maven.compiler.target>1.8</maven.compiler.target>
     <maven.compiler.source>1.8</maven.compiler.source>
-    <async-http-client.version>2.4.6-SNAPSHOT</async-http-client.version>
+    <async-http-client.version>2.0.28</async-http-client.version>
     <assertj-core.version>3.1.0</assertj-core.version>
     <commons-io.version>2.4</commons-io.version>
     <commons-lang3.version>3.4</commons-lang3.version>

@@ -16,6 +16,7 @@
  */
 package org.tomitribe.tribestream.httpclient;
 
+import com.tomitribe.tribestream.peroxide.LoggingHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.asynchttpclient.AsyncHandler;
 import org.asynchttpclient.AsyncHttpClient;
@@ -23,12 +24,14 @@ import org.asynchttpclient.BoundRequestBuilder;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.asynchttpclient.HttpResponseBodyPart;
+import org.asynchttpclient.HttpResponseHeaders;
 import org.asynchttpclient.HttpResponseStatus;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Response;
 import org.junit.Test;
 import org.tomitribe.util.Duration;
 
+import java.io.ByteArrayInputStream;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -43,24 +46,16 @@ public class GetTest {
 
         final AsyncHttpClient asyncHttpClient = new DefaultAsyncHttpClient(config.build());
 
-        final BoundRequestBuilder get = asyncHttpClient.prepareGet("http://director.downloads.raspberrypi.org//raspbian/images/raspbian-2018-04-19/2018-04-18-raspbian-stretch.zip");
+        final BoundRequestBuilder get = asyncHttpClient.prepareGet("http://director.downloads.raspberrypi.org/raspbian/images/raspbian-2018-04-19/2018-04-18-raspbian-stretch.zip");
 
-        final ListenableFuture<Response> execute = get.execute(new AsyncHandler<Response>() {
+        final AsyncHandler<Response> handler = new AsyncHandler<Response>() {
             @Override
             public State onStatusReceived(HttpResponseStatus responseStatus) throws Exception {
-                System.out.print(responseStatus.getStatusCode());
-                System.out.print(" ");
-                System.out.println(responseStatus.getStatusText());
                 return State.CONTINUE;
             }
 
             @Override
-            public State onHeadersReceived(HttpHeaders headers) throws Exception {
-                for (final Map.Entry<String, String> header : headers) {
-                    System.out.print(header.getKey());
-                    System.out.print(": ");
-                    System.out.println(header.getValue());
-                }
+            public State onHeadersReceived(HttpResponseHeaders headers) throws Exception {
                 return State.CONTINUE;
             }
 
@@ -78,7 +73,11 @@ public class GetTest {
             public Response onCompleted() throws Exception {
                 return null;
             }
-        });
+        };
+
+        get.setBody(new ByteArrayInputStream(new byte[0]));
+
+        final ListenableFuture<Response> execute = get.execute(new LoggingHandler<>(handler, System.out));
 
         execute.get();
     }
