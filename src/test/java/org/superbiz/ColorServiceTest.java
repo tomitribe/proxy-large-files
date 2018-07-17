@@ -16,7 +16,8 @@
  */
 package org.superbiz;
 
-import com.tomitribe.tribestream.proxy.ProxyServlet;
+import com.tomitribe.prototype.proxy.ProxyServlet;
+import io.superbiz.ColorService;
 import org.apache.cxf.jaxrs.client.WebClient;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
