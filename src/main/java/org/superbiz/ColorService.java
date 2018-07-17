@@ -33,6 +33,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.File;
 import java.io.IOException;
@@ -251,4 +252,13 @@ public class ColorService {
             throw new IllegalStateException(e);
         }
     }
+
+    @GET
+    @Path("code/{code}")
+    @Consumes("*/*")
+    public Response code(final @PathParam("code") int code)  {
+        return Response.status(code)
+                .header("code", code).build();
+    }
+
 }
