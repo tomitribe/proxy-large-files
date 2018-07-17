@@ -17,6 +17,7 @@
 package org.superbiz;
 
 import org.tomitribe.util.Duration;
+import org.tomitribe.util.Hex;
 import org.tomitribe.util.IO;
 import org.tomitribe.util.Size;
 import org.tomitribe.util.SizeUnit;
@@ -36,6 +37,9 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -43,9 +47,9 @@ import static javax.ejb.LockType.READ;
 import static javax.ejb.LockType.WRITE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
-//@Lock(READ)
-//@Singleton
-//@Path("/color")
+@Lock(READ)
+@Singleton
+@Path("/color")
 public class ColorService {
 
     @Context
@@ -216,5 +220,35 @@ public class ColorService {
 
             os.flush();
         };
+    }
+
+    @POST
+    @Path("hash")
+    @Consumes("*/*")
+    public String hash() throws NoSuchAlgorithmException {
+        final MessageDigest instance = MessageDigest.getInstance("SHA-256");
+        try {
+            IO.copy(request.getInputStream(), new OutputStream() {
+                @Override
+                public void write(final byte[] b) throws IOException {
+                    instance.update(b);
+                }
+
+                @Override
+                public void write(final byte[] b, final int off, final int len) throws IOException {
+                    instance.update(b, off, len);
+                }
+
+                @Override
+                public void write(final int b) throws IOException {
+                    instance.update((byte) b);
+                }
+            });
+
+            final byte[] digest = instance.digest();
+            return Hex.toString(digest);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }
