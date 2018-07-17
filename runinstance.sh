@@ -1,9 +1,11 @@
 #!/bin/bash
 
-PORT="${1?Specify a base port number}"
+TARGET="${1?Specify 'service' or 'proxy'}"
+PORT="${2?Specify a base port number}"
+run=${3:-run} # specify "debug" to run in debug mode
 
-cd "$(dirname $0)" &&
-mvn -o tomee:run \
+cd "$(dirname $0)" && cd "$TARGET" &&
+mvn -o tomee:$run \
     -Dtomee-plugin.http=$PORT \
     -Dtomee-plugin.ajp=$(($PORT+1)) \
     -Dtomee-plugin.shutdown=$(($PORT+2)) \

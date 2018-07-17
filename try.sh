@@ -5,6 +5,16 @@ function local_get {
     curl -v "http://localhost:7000/color/send/$size" > /tmp/foo.txt && ls -lh /tmp/foo.txt
 }
 
+function local_hash {
+    file="${1?Specify a file name}"
+    curl -v "http://localhost:7000/color/hash" --data-binary "@$file"
+}
+
+function proxy_hash {
+    file="${1?Specify a file name}"
+    curl -v "http://localhost:8080/proxy/color/hash" --data-binary "@$file"
+}
+
 function local_echo {
     size=${1:-1234567890}
     perl -e "print 'A'x$size" | curl -v --data-binary "@-" http://localhost:7000/color/echo > /tmp/foo.txt && ls -lh /tmp/foo.txt
