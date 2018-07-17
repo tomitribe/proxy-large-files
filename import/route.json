@@ -1,0 +1,6 @@
+//api/route
+{
+  "index": 0,
+  "modRewrite": "RewriteRule \"^/proxy/(.*)$\" \"http://localhost:7000/$1\" [P,NE]",
+  "name": "Localhost Route"
+}

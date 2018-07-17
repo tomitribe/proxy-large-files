@@ -1,0 +1,6 @@
+//api/route
+{
+  "index": 1,
+  "modRewrite": "RewriteRule \"^/(color/.*)$\" \"http://localhost:7000/$1\" [P,NE]",
+  "name": "Color Route"
+}
