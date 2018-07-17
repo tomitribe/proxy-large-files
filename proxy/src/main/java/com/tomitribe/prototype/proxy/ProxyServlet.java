@@ -9,7 +9,6 @@
  */
 package com.tomitribe.prototype.proxy;
 
-import com.tomitribe.tribestream.peroxide.LoggingHandler;
 import org.asynchttpclient.AsyncHandler;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.BoundRequestBuilder;

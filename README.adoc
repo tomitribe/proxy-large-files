@@ -22,3 +22,8 @@ This changes the target from the default `http://localhost:7000` to
 `https://google.com`.  Once this is done you do not need to pass the
 `host` query flag again to talk to `google.com`
 
+As a quick test with the default setup (not changing the host), both of these should work:
+
+ - `curl -v http://localhost:6000/color/code/200`
+ - `curl -v http://localhost:7000/color/code/200`
+ 

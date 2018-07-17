@@ -33,11 +33,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.tomitribe.tribestream</groupId>
-      <artifactId>tribestream-peroxide</artifactId>
-      <version>0.1-SNAPSHOT</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.openejb</groupId>
       <artifactId>javaee-api</artifactId>
       <version>${openejb.javaee.api}</version>
