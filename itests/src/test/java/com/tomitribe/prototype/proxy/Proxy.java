@@ -38,8 +38,8 @@ public class Proxy {
             return new Location(uri);
         }
 
-        public <H extends HttpRequestBase> Request<H> request(final Function<URI, HttpRequestBase> c) {
-            return new Request(c.apply(uri));
+        public <H extends HttpRequestBase> Request<H> request(final Function<URI, ? extends HttpRequestBase> method) {
+            return new Request(method.apply(uri));
         }
 
         public URI getUri() {
