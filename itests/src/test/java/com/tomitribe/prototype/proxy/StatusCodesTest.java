@@ -11,7 +11,6 @@ package com.tomitribe.prototype.proxy;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.URI;
@@ -24,6 +23,10 @@ import static com.tomitribe.prototype.proxy.Methods.OPTIONS;
 import static com.tomitribe.prototype.proxy.Methods.POST;
 import static com.tomitribe.prototype.proxy.Methods.PUT;
 
+/**
+ * Here we verify that our client can recieve any kind of
+ * HTTP status code from our service
+ */
 public class StatusCodesTest {
 
     private final Proxy.Location proxy = Proxy.location();
@@ -2464,7 +2467,6 @@ public class StatusCodesTest {
     public void test300_HEAD() throws Exception {
         assertCode(300, HEAD);
     }
-    @Ignore("Doesn't appear to be legal in plain Tomcat/CXF, no proxy")
     @Test
     public void test301_GET() throws Exception {
         assertCode(301, GET);
@@ -2485,7 +2487,6 @@ public class StatusCodesTest {
     public void test301_OPTIONS() throws Exception {
         assertCode(301, OPTIONS);
     }
-    @Ignore("Doesn't appear to be legal in plain Tomcat/CXF, no proxy")
     @Test
     public void test301_HEAD() throws Exception {
         assertCode(301, HEAD);
@@ -2514,32 +2515,26 @@ public class StatusCodesTest {
     public void test302_HEAD() throws Exception {
         assertCode(302, HEAD);
     }
-    @Ignore("Doesn't appear to be legal in plain Tomcat/CXF, no proxy")
     @Test
     public void test303_GET() throws Exception {
         assertCode(303, GET);
     }
-    @Ignore("Doesn't appear to be legal in plain Tomcat/CXF, no proxy")
     @Test
     public void test303_POST() throws Exception {
         assertCode(303, POST);
     }
-    @Ignore("Doesn't appear to be legal in plain Tomcat/CXF, no proxy")
     @Test
     public void test303_PUT() throws Exception {
         assertCode(303, PUT);
     }
-    @Ignore("Doesn't appear to be legal in plain Tomcat/CXF, no proxy")
     @Test
     public void test303_DELETE() throws Exception {
         assertCode(303, DELETE);
     }
-    @Ignore("Doesn't appear to be legal in plain Tomcat/CXF, no proxy")
     @Test
     public void test303_OPTIONS() throws Exception {
         assertCode(303, OPTIONS);
     }
-    @Ignore("Doesn't appear to be legal in plain Tomcat/CXF, no proxy")
     @Test
     public void test303_HEAD() throws Exception {
         assertCode(303, HEAD);
@@ -2616,7 +2611,6 @@ public class StatusCodesTest {
     public void test306_HEAD() throws Exception {
         assertCode(306, HEAD);
     }
-    @Ignore("Doesn't appear to be legal in plain Tomcat/CXF, no proxy")
     @Test
     public void test307_GET() throws Exception {
         assertCode(307, GET);
@@ -2637,7 +2631,6 @@ public class StatusCodesTest {
     public void test307_OPTIONS() throws Exception {
         assertCode(307, OPTIONS);
     }
-    @Ignore("Doesn't appear to be legal in plain Tomcat/CXF, no proxy")
     @Test
     public void test307_HEAD() throws Exception {
         assertCode(307, HEAD);

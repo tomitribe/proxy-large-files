@@ -9,9 +9,11 @@
  */
 package com.tomitribe.prototype.proxy;
 
+import org.apache.http.client.RedirectStrategy;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.openejb.util.Join;
 
@@ -81,7 +83,7 @@ public class Proxy {
         }
 
         public CloseableHttpResponse execute() throws IOException {
-            return execute(HttpClients.createDefault());
+            return execute(HttpClientBuilder.create().disableRedirectHandling().build());
         }
     }
 }
