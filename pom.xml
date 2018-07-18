@@ -29,6 +29,7 @@
   <modules>
     <module>proxy</module>
     <module>service</module>
+    <module>itests</module>
   </modules>
 
   <dependencies>
