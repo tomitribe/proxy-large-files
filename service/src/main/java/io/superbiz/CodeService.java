@@ -58,41 +58,41 @@ public class CodeService {
     @Path("{code}")
     @Consumes("*/*")
     public Response get(final @PathParam("code") int code) {
-        return Response.status(code).header("code", code).build();
+        return Response.status(code).header("code", code).header("method", "GET").build();
     }
 
     @POST
     @Path("{code}")
     @Consumes("*/*")
     public Response post(final @PathParam("code") int code) {
-        return Response.status(code).header("code", code).build();
+        return Response.status(code).header("code", code).header("method", "POST").build();
     }
 
     @PUT
     @Path("{code}")
     @Consumes("*/*")
     public Response put(final @PathParam("code") int code) {
-        return Response.status(code).header("code", code).build();
+        return Response.status(code).header("code", code).header("method", "PUT").build();
     }
 
     @DELETE
     @Path("{code}")
     @Consumes("*/*")
     public Response delete(final @PathParam("code") int code) {
-        return Response.status(code).header("code", code).build();
+        return Response.status(code).header("code", code).header("method", "DELETE").build();
     }
 
     @OPTIONS
     @Path("{code}")
     @Consumes("*/*")
     public Response options(final @PathParam("code") int code) {
-        return Response.status(code).header("code", code).build();
+        return Response.status(code).header("code", code).header("method", "OPTIONS").build();
     }
 
     @HEAD
     @Path("{code}")
     @Consumes("*/*")
     public Response head(final @PathParam("code") int code) {
-        return Response.status(code).header("code", code).build();
+        return Response.status(code).header("code", code).header("method", "HEAD").build();
     }
 }

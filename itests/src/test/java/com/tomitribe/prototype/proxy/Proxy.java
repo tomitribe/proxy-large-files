@@ -44,6 +44,10 @@ public class Proxy {
             return new Request(method.apply(uri));
         }
 
+        public <H extends HttpRequestBase> Request<H> request(final Method method) {
+            return new Request(method.create(uri));
+        }
+
         public URI getUri() {
             return uri;
         }
