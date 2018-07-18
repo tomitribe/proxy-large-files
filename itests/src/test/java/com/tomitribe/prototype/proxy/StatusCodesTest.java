@@ -28,6 +28,17 @@ public class StatusCodesTest {
 
     private final Proxy.Location proxy = Proxy.location();
 
+    public void assertCode(final int code, final Function<URI, ? extends HttpRequestBase> method) throws java.io.IOException {
+        final CloseableHttpResponse response = proxy.request(method)
+                .header("code", code)
+                .path("code", code)
+                .execute();
+
+        Assert.that(response)
+                .header("code", code)
+                .statusCode(code)
+                .close();
+    }
 
     @Test
     public void test200_GET() throws Exception {
@@ -9638,17 +9649,5 @@ public class StatusCodesTest {
     @Test
     public void test599_HEAD() throws Exception {
         assertCode(599, HEAD);
-    }
-
-    public void assertCode(final int code, final Function<URI, ? extends HttpRequestBase> method) throws java.io.IOException {
-        final CloseableHttpResponse response = proxy.request(method)
-                .header("code", code)
-                .path("code", code)
-                .execute();
-
-        Assert.that(response)
-                .header("code", code)
-                .statusCode(code)
-                .close();
     }
 }
