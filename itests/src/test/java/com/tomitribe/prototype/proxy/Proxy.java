@@ -9,8 +9,10 @@
  */
 package com.tomitribe.prototype.proxy;
 
+import org.apache.http.HttpEntity;
 import org.apache.http.client.RedirectStrategy;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -18,6 +20,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.openejb.util.Join;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
@@ -75,6 +78,15 @@ public class Proxy {
         public Request<H> path(final Object... path) {
             final URI uri = base.getURI().resolve(e(Join.join("/", path)));
             base.setURI(uri);
+            return this;
+        }
+
+        public Request<H> entity(final HttpEntity entity) {
+            if (! HttpEntityEnclosingRequestBase.class.isInstance(base)) {
+                throw new IllegalArgumentException(String.format("%s does not accept request entities", base.getClass().getName()));
+            }
+
+            HttpEntityEnclosingRequestBase.class.cast(base).setEntity(entity);
             return this;
         }
 
