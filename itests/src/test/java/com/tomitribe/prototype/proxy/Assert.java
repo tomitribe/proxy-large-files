@@ -14,6 +14,7 @@ import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.apache.openejb.util.Join;
+import org.tomitribe.util.PrintString;
 
 import java.io.IOException;
 
@@ -25,15 +26,26 @@ public class Assert {
 
     public static class Response {
         private final CloseableHttpResponse response;
+        private final String debug;
 
         public Response(final CloseableHttpResponse response) {
             this.response = response;
+
+            final PrintString out = new PrintString();
+            out.printf("%n%n--RESPONSE--%n");
+            final StatusLine s = response.getStatusLine();
+            out.printf("%s %s %s%n", s.getStatusCode(), s.getReasonPhrase(), s.getProtocolVersion());
+            for (final Header header : response.getAllHeaders()) {
+                out.printf("%s: %s%n", header.getName(), header.getValue());
+            }
+            out.printf("------------%n");
+            debug = out.toString();
         }
 
         public Response header(final String name, final Object value) {
             final Header header = response.getFirstHeader(name);
-            org.junit.Assert.assertNotNull("Missing header: " + name, header);
-            org.junit.Assert.assertEquals("" + value, header.getValue());
+            org.junit.Assert.assertNotNull("Missing header: " + name + debug, header);
+            org.junit.Assert.assertEquals("" + value + debug, header.getValue());
             return this;
         }
 
@@ -48,7 +60,8 @@ public class Assert {
 
         public Response statusCode(final int code) {
             final StatusLine statusLine = response.getStatusLine();
-            org.junit.Assert.assertEquals(code, statusLine.getStatusCode());
+            final String message = String.format("Found status %s, expected %s%s", statusLine.getStatusCode(), code, debug);
+            org.junit.Assert.assertEquals(message, code, statusLine.getStatusCode());
             return this;
         }
 
@@ -60,7 +73,7 @@ public class Assert {
 
         public Response missing(final String headerName) {
             final Header header = response.getFirstHeader(headerName);
-            org.junit.Assert.assertNull("Unexpected header: " + headerName, header);
+            org.junit.Assert.assertNull("Unexpected header: " + headerName + debug, header);
             return this;
         }
     }
