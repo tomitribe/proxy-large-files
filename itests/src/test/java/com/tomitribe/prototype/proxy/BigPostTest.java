@@ -9,6 +9,7 @@
  */
 package com.tomitribe.prototype.proxy;
 
+import com.tomitribe.prototype.proxy.util.Chance;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.junit.Test;
 import org.tomitribe.util.Size;
@@ -31,10 +32,16 @@ public class BigPostTest {
         assertChunked(code, method, Size.parse(size).getSize(SizeUnit.BYTES));
     }
 
-    private void assertChunked(final int code, final Method method, final long size1) throws IOException {
-        final Body body = Body.generate(size1);
+    private void assertChunked(final int codeRange, final Method method, final long size) throws IOException {
+        // Respond in a range, say 200-299
+        final int code = Chance.range(codeRange, codeRange + 99);
+
+        // Generate a payload that is within 30% of the requested size
+        final Body body = Body.generate(Chance.deviate(size, 0.3f));
+
         final CloseableHttpResponse response = proxy.request(method)
                 .path("payload")
+                .header("code", code)
                 .chunked(body)
                 .execute();
 
@@ -52,10 +59,16 @@ public class BigPostTest {
         assertContentLength(code, method, Size.parse(size).getSize(SizeUnit.BYTES));
     }
 
-    private void assertContentLength(final int code, final Method method, final long size1) throws IOException {
-        final Body body = Body.generate(size1);
+    private void assertContentLength(final int codeRange, final Method method, final long size) throws IOException {
+        // Respond in a range, say 200-299
+        final int code = Chance.range(codeRange, codeRange + 99);
+
+        // Generate a payload that is within 30% of the requested size
+        final Body body = Body.generate(Chance.deviate(size, 0.3f));
+
         final CloseableHttpResponse response = proxy.request(method)
                 .path("payload")
+                .header("code", code)
                 .content(body)
                 .execute();
 

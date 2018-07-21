@@ -20,6 +20,17 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class Chance {
 
+    public static int deviate(int average, float offset) {
+        int min = (int) (average - (average * offset));
+        int max = (int) (average + (average * offset));
+        return ThreadLocalRandom.current().nextInt(min, max);
+    }
+
+    public static long deviate(long average, float offset) {
+        long min = (long) (average - (average * offset));
+        long max = (long) (average + (average * offset));
+        return ThreadLocalRandom.current().nextLong(min, max);
+    }
 
     public static int range(int min, int max) {
         return ThreadLocalRandom.current().nextInt(min, max);
