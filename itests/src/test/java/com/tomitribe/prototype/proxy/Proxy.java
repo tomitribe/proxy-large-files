@@ -61,7 +61,11 @@ public class Proxy {
         private final HttpRequestBase base;
 
         public Request(final HttpRequestBase base) {
-            this.base = base;
+            if (!(base instanceof HttpEntityEnclosingRequest)) {
+                this.base = new HttpEntityAdapter(base);
+            } else {
+                this.base = base;
+            }
         }
 
         public Request var(final String name, final Object value) {

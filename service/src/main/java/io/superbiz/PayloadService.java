@@ -25,6 +25,10 @@ import javax.ejb.Singleton;
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.HEAD;
+import javax.ws.rs.OPTIONS;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -59,6 +63,12 @@ public class PayloadService {
     public PayloadService() {
     }
 
+    @GET
+    @Consumes("*/*")
+    public Response get(final @Context HttpServletRequest request) throws Exception {
+        return process(request);
+    }
+
     @POST
     @Consumes("*/*")
     public Response post(final @Context HttpServletRequest request) throws Exception {
@@ -68,6 +78,24 @@ public class PayloadService {
     @PUT
     @Consumes("*/*")
     public Response put(final @Context HttpServletRequest request) throws Exception {
+        return process(request);
+    }
+
+    @DELETE
+    @Consumes("*/*")
+    public Response delete(final @Context HttpServletRequest request) throws Exception {
+        return process(request);
+    }
+
+    @OPTIONS
+    @Consumes("*/*")
+    public Response options(final @Context HttpServletRequest request) throws Exception {
+        return process(request);
+    }
+
+    @HEAD
+    @Consumes("*/*")
+    public Response head(final @Context HttpServletRequest request) throws Exception {
         return process(request);
     }
 

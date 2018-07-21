@@ -45,7 +45,8 @@ public class Assert {
         public Response header(final String name, final Object value) {
             final Header header = response.getFirstHeader(name);
             org.junit.Assert.assertNotNull("Missing header: " + name + debug, header);
-            org.junit.Assert.assertEquals("" + value + debug, header.getValue());
+            final String message = String.format("Header '%s', expected '%s', found '%s'%s", name, value, header.getValue(), debug);
+            org.junit.Assert.assertEquals(message, "" + value, header.getValue());
             return this;
         }
 

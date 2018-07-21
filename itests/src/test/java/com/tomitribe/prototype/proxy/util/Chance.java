@@ -22,11 +22,11 @@ public class Chance {
 
 
     public static int range(int min, int max) {
-        return ThreadLocalRandom.current().nextInt(10, 100);
+        return ThreadLocalRandom.current().nextInt(min, max);
     }
 
     public static long range(long min, long max) {
-        return ThreadLocalRandom.current().nextLong(10, 100);
+        return ThreadLocalRandom.current().nextLong(min, max);
     }
 
     public boolean in(int in, int of) {
