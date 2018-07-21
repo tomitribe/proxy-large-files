@@ -109,6 +109,21 @@ public class BigPostTest {
         assertContentLength(200, GET, "16GB");
     }
 
+    @Test
+    public void test16GBGet300() throws Exception {
+        assertContentLength(300, GET, "16GB");
+    }
+
+    @Test
+    public void test16GBGet400() throws Exception {
+        assertContentLength(400, GET, "16GB");
+    }
+
+    @Test
+    public void test16GBGet500() throws Exception {
+        assertContentLength(500, GET, "16GB");
+    }
+
     //---- GET : Chunked ------------//
 
     @Test
@@ -136,6 +151,20 @@ public class BigPostTest {
         assertChunked(200, GET, "16GB");
     }
 
+    @Test
+    public void test16GBGetChunked300() throws Exception {
+        assertContentLength(300, GET, "16GB");
+    }
+
+    @Test
+    public void test16GBGetChunked400() throws Exception {
+        assertContentLength(400, GET, "16GB");
+    }
+
+    @Test
+    public void test16GBGetChunked500() throws Exception {
+        assertContentLength(500, GET, "16GB");
+    }
     //---- POST : Content-Length ------------//
 
     @Test
@@ -161,6 +190,21 @@ public class BigPostTest {
     @Test
     public void test16GBPost() throws Exception {
         assertContentLength(200, POST, "16GB");
+    }
+
+    @Test
+    public void test16GBPost300() throws Exception {
+        assertContentLength(300, POST, "16GB");
+    }
+
+    @Test
+    public void test16GBPost400() throws Exception {
+        assertContentLength(400, POST, "16GB");
+    }
+
+    @Test
+    public void test16GBPost500() throws Exception {
+        assertContentLength(500, POST, "16GB");
     }
 
     //---- POST : Chunked ------------//
@@ -190,6 +234,21 @@ public class BigPostTest {
         assertChunked(200, POST, "16GB");
     }
 
+    @Test
+    public void test16GBPostChunked300() throws Exception {
+        assertContentLength(300, POST, "16GB");
+    }
+
+    @Test
+    public void test16GBPostChunked400() throws Exception {
+        assertContentLength(400, POST, "16GB");
+    }
+
+    @Test
+    public void test16GBPostChunked500() throws Exception {
+        assertContentLength(500, POST, "16GB");
+    }
+
     //---- PUT : Content-Length ------------//
 
     @Test
@@ -215,6 +274,21 @@ public class BigPostTest {
     @Test
     public void test16GBPut() throws Exception {
         assertContentLength(200, PUT, "16GB");
+    }
+
+    @Test
+    public void test16GBPut300() throws Exception {
+        assertContentLength(300, PUT, "16GB");
+    }
+
+    @Test
+    public void test16GBPut400() throws Exception {
+        assertContentLength(400, PUT, "16GB");
+    }
+
+    @Test
+    public void test16GBPut500() throws Exception {
+        assertContentLength(500, PUT, "16GB");
     }
 
     //---- PUT : Chunked ------------//
@@ -244,12 +318,22 @@ public class BigPostTest {
         assertChunked(200, PUT, "16GB");
     }
 
-    //---- DELETE : Content-Length ------------//
+    @Test
+    public void test16GBPutChunked300() throws Exception {
+        assertContentLength(300, PUT, "16GB");
+    }
 
     @Test
-    public void test1MBDelete() throws Exception {
-        assertContentLength(200, DELETE, "1MB");
+    public void test16GBPutChunked400() throws Exception {
+        assertContentLength(400, PUT, "16GB");
     }
+
+    @Test
+    public void test16GBPutChunked500() throws Exception {
+        assertContentLength(500, PUT, "16GB");
+    }
+
+    //---- DELETE : Content-Length ------------//
 
     @Test
     public void test1GBDelete() throws Exception {
@@ -274,6 +358,21 @@ public class BigPostTest {
     @Test
     public void test16GBDelete() throws Exception {
         assertContentLength(200, DELETE, "16GB");
+    }
+
+    @Test
+    public void test16GBDelete300() throws Exception {
+        assertContentLength(300, DELETE, "16GB");
+    }
+
+    @Test
+    public void test16GBDelete400() throws Exception {
+        assertContentLength(400, DELETE, "16GB");
+    }
+
+    @Test
+    public void test16GBDelete500() throws Exception {
+        assertContentLength(500, DELETE, "16GB");
     }
 
     //---- DELETE : Chunked ------------//
@@ -303,6 +402,21 @@ public class BigPostTest {
         assertChunked(200, DELETE, "16GB");
     }
 
+    @Test
+    public void test16GBDeleteChunked300() throws Exception {
+        assertContentLength(300, DELETE, "16GB");
+    }
+
+    @Test
+    public void test16GBDeleteChunked400() throws Exception {
+        assertContentLength(400, DELETE, "16GB");
+    }
+
+    @Test
+    public void test16GBDeleteChunked500() throws Exception {
+        assertContentLength(500, DELETE, "16GB");
+    }
+
     //---- OPTIONS : Content-Length ------------//
 
     @Test
@@ -328,6 +442,21 @@ public class BigPostTest {
     @Test
     public void test16GBOptions() throws Exception {
         assertContentLength(200, OPTIONS, "16GB");
+    }
+
+    @Test
+    public void test16GBOptions300() throws Exception {
+        assertContentLength(300, OPTIONS, "16GB");
+    }
+
+    @Test
+    public void test16GBOptions400() throws Exception {
+        assertContentLength(400, OPTIONS, "16GB");
+    }
+
+    @Test
+    public void test16GBOptions500() throws Exception {
+        assertContentLength(500, OPTIONS, "16GB");
     }
 
     //---- OPTIONS : Chunked ------------//
@@ -357,6 +486,21 @@ public class BigPostTest {
         assertChunked(200, OPTIONS, "16GB");
     }
 
+    @Test
+    public void test16GBOptionsChunked300() throws Exception {
+        assertContentLength(300, OPTIONS, "16GB");
+    }
+
+    @Test
+    public void test16GBOptionsChunked400() throws Exception {
+        assertContentLength(400, OPTIONS, "16GB");
+    }
+
+    @Test
+    public void test16GBOptionsChunked500() throws Exception {
+        assertContentLength(500, OPTIONS, "16GB");
+    }
+
     //---- HEAD : Content-Length ------------//
 
     @Test
@@ -382,6 +526,21 @@ public class BigPostTest {
     @Test
     public void test16GBHead() throws Exception {
         assertContentLength(200, HEAD, "16GB");
+    }
+
+    @Test
+    public void test16GBHead300() throws Exception {
+        assertContentLength(300, HEAD, "16GB");
+    }
+
+    @Test
+    public void test16GBHead400() throws Exception {
+        assertContentLength(400, HEAD, "16GB");
+    }
+
+    @Test
+    public void test16GBHead500() throws Exception {
+        assertContentLength(500, HEAD, "16GB");
     }
 
     //---- HEAD : Chunked ------------//
@@ -411,4 +570,18 @@ public class BigPostTest {
         assertChunked(200, HEAD, "16GB");
     }
 
+    @Test
+    public void test16GBHeadChunked300() throws Exception {
+        assertContentLength(300, HEAD, "16GB");
+    }
+
+    @Test
+    public void test16GBHeadChunked400() throws Exception {
+        assertContentLength(400, HEAD, "16GB");
+    }
+
+    @Test
+    public void test16GBHeadChunked500() throws Exception {
+        assertContentLength(500, HEAD, "16GB");
+    }
 }
