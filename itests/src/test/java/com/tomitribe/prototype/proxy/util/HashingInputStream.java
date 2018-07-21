@@ -9,24 +9,19 @@
  */
 package com.tomitribe.prototype.proxy.util;
 
-import org.tomitribe.util.Hex;
+import io.airlift.slice.XxHash64;
+import org.tomitribe.util.Longs;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 public class HashingInputStream extends FilterInputStream {
-    private final MessageDigest digest;
+    private final XxHash64 digest;
 
     public HashingInputStream(final InputStream inputStream) {
         super(inputStream);
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
+        digest = new XxHash64();
     }
 
     @Override
@@ -42,14 +37,13 @@ public class HashingInputStream extends FilterInputStream {
     public int read() throws IOException {
         final int read = super.read();
         if (read > -1) {
-            digest.update((byte) read);
+            digest.update(new byte[]{(byte) read});
         }
         return read;
     }
 
     public String asHex() {
-        final byte[] digest = this.digest.digest();
-        return Hex.toString(digest);
+        return Longs.toHex(digest.hash());
     }
 
 }

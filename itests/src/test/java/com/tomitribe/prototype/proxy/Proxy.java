@@ -10,13 +10,12 @@
 package com.tomitribe.prototype.proxy;
 
 import org.apache.http.HttpEntity;
-import org.apache.http.client.RedirectStrategy;
+import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.openejb.util.Join;
 
 import java.io.IOException;
@@ -43,11 +42,11 @@ public class Proxy {
             return new Location(uri);
         }
 
-        public <H extends HttpRequestBase> Request<H> request(final Function<URI, ? extends HttpRequestBase> method) {
+        public <H extends HttpRequestBase> Request request(final Function<URI, ? extends HttpRequestBase> method) {
             return new Request(method.apply(uri));
         }
 
-        public <H extends HttpRequestBase> Request<H> request(final Method method) {
+        public <H extends HttpRequestBase> Request request(final Method method) {
             return new Request(method.create(uri));
         }
 
@@ -56,37 +55,49 @@ public class Proxy {
         }
     }
 
-    public static class Request<H extends HttpRequestBase> {
+    public static class Request {
 
         private final Map<String, String> variables = new HashMap<>();
-        private final H base;
+        private final HttpRequestBase base;
 
-        public Request(final H base) {
+        public Request(final HttpRequestBase base) {
             this.base = base;
         }
 
-        public Request<H> var(final String name, final Object value) {
+        public Request var(final String name, final Object value) {
             variables.put(e(name), e("" + value));
             return this;
         }
 
-        public Request<H> header(final String name, final Object value) {
+        public Request header(final String name, final Object value) {
             base.setHeader(e(name), e("" + value));
             return this;
         }
 
-        public Request<H> path(final Object... path) {
+        public Request path(final Object... path) {
             final URI uri = base.getURI().resolve(e(Join.join("/", path)));
             base.setURI(uri);
             return this;
         }
 
-        public Request<H> entity(final HttpEntity entity) {
-            if (! HttpEntityEnclosingRequestBase.class.isInstance(base)) {
+        public Request body(final InputStream body) {
+            return entity(new InputStreamEntity(body));
+        }
+
+        public Request chunked(final Body body) {
+            return entity(new InputStreamEntity(body.getInputStream()));
+        }
+
+        public Request content(final Body body) {
+            return entity(new InputStreamEntity(body.getInputStream(), body.getLength()));
+        }
+
+        public Request entity(final HttpEntity entity) {
+            if (! HttpEntityEnclosingRequest.class.isInstance(base)) {
                 throw new IllegalArgumentException(String.format("%s does not accept request entities", base.getClass().getName()));
             }
 
-            HttpEntityEnclosingRequestBase.class.cast(base).setEntity(entity);
+            HttpEntityEnclosingRequest.class.cast(base).setEntity(entity);
             return this;
         }
 

@@ -27,17 +27,20 @@ public class BigPostTest {
 
     public void assertReceived(final int code, final Method method, final long size, final boolean chunked) throws java.io.IOException {
 
-        final InputStreamEntity entity;
+        final Body body = Body.generate(size);
+        final CloseableHttpResponse response;
         if (chunked) {
-            entity = new InputStreamEntity(new RandomInputStream(size)); // missing off the size will set it to chunked
+            response = proxy.request(method)
+                    .path("payload")
+                    .chunked(body)
+                    .execute();
         } else {
-            entity = new InputStreamEntity(new RandomInputStream(size), size);
+            response = proxy.request(method)
+                    .path("payload")
+                    .content(body)
+                    .execute();
         }
 
-        final CloseableHttpResponse response = proxy.request(method)
-                .path("payload")
-                .entity(entity)
-                .execute();
 
         if (chunked) {
             assertEquals(0, response.getHeaders("X-Request-Header-content-length").length);
@@ -48,7 +51,7 @@ public class BigPostTest {
         }
 
         Assert.that(response)
-                .header("X-Request-Payload-Size", size)
+                .header("hash", body.getHash())
                 .statusCode(code)
                 .close();
     }

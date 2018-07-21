@@ -16,6 +16,10 @@
  */
 package io.superbiz;
 
+
+import io.airlift.slice.XxHash64;
+import org.tomitribe.util.Longs;
+
 import javax.ejb.Lock;
 import javax.ejb.Singleton;
 import javax.servlet.ServletInputStream;
@@ -26,8 +30,8 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
-
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Enumeration;
 
 import static javax.ejb.LockType.READ;
@@ -71,7 +75,7 @@ public class PayloadService {
         return process(request);
     }
 
-    private Response process(@Context HttpServletRequest request) throws IOException {
+    private Response process(@Context HttpServletRequest request) throws IOException, NoSuchAlgorithmException {
         final Response.ResponseBuilder responseBuilder = Response.status(200);
 
         final Enumeration<String> headerNames = request.getHeaderNames();
@@ -85,16 +89,16 @@ public class PayloadService {
             }
         }
 
+        final XxHash64 hash = new XxHash64();
         byte[] buffer = new byte[10 * 1024 * 1024]; // 10 MB
-        long counter = 0;
         int bytesRead = 0;
 
         final ServletInputStream inputStream = request.getInputStream();
         while ((bytesRead = inputStream.read(buffer)) > -1) {
-            counter += bytesRead;
+            hash.update(buffer, 0, bytesRead);
         }
 
-        responseBuilder.header("X-Request-Payload-Size", counter);
+        responseBuilder.header("hash", Longs.toHex(hash.hash()));
         return responseBuilder.build();
     }
 }
