@@ -32,7 +32,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Enumeration;
 
 import static javax.ejb.LockType.READ;
 
@@ -57,9 +56,6 @@ import static javax.ejb.LockType.READ;
 @Path("/payload")
 public class PayloadService {
 
-    @Context
-    private HttpServletRequest request;
-
     public PayloadService() {
     }
 
@@ -76,19 +72,6 @@ public class PayloadService {
     }
 
     private Response process(@Context HttpServletRequest request) throws IOException, NoSuchAlgorithmException {
-        final Response.ResponseBuilder responseBuilder = Response.status(200);
-
-        final Enumeration<String> headerNames = request.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            final String headerName = headerNames.nextElement();
-            final Enumeration<String> headerValues = request.getHeaders(headerName);
-
-            while (headerValues.hasMoreElements()) {
-                final String headerValue = headerValues.nextElement();
-                responseBuilder.header("X-Request-Header-" + headerName, headerValue);
-            }
-        }
-
         final XxHash64 hash = new XxHash64();
         byte[] buffer = new byte[10 * 1024 * 1024]; // 10 MB
         int bytesRead = 0;
@@ -98,7 +81,6 @@ public class PayloadService {
             hash.update(buffer, 0, bytesRead);
         }
 
-        responseBuilder.header("hash", Longs.toHex(hash.hash()));
-        return responseBuilder.build();
+        return Services.response(request).header("hash", Longs.toHex(hash.hash())).build();
     }
 }
